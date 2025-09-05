@@ -4,25 +4,44 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
-
 // DB 설정
 var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
 
-// 세션 설정
+// Session 설정
+var session = require('express-session');
+var fileStore = require('session-file-store')(session);
+
+var indexRouter = require('./routes/index');
+var usersRouter = require('./routes/users');
 
 var app = express();
 
+// 세션 설정
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'session-login',
+  resave: false,
+  saveUninitialized: false,  // 세션이 필요할 때만 저장하도록 설정
+  store: new fileStore({
+    path: './sessions', // 세션 파일 저장 경로 지정
+    ttl: 24 * 60 * 60, // 세션 유효 기간 (1일)
+    reapInterval: 60 * 60 // 세션 정리 주기 (1시간)
+  }),
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production', // HTTPS 환경에서만 쿠키 전송
+    maxAge: 24 * 60 * 60 * 1000 // 쿠키 유효 기간 (1일)
+  }
+}));
+
 // DB 연결
-async function connectDB(){
+async function connectDB() {
   var databaseUrl = 'mongodb://localhost:27017';
 
   try {
     const database = await MongoClient.connect(databaseUrl, {
-      useNewUrlParser : true,
-      useUnifiedTopology : true,
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
     });
     console.log('Database connected successfully');
     app.set('database', database.db('tictactoe'));
@@ -31,17 +50,16 @@ async function connectDB(){
     process.on('SIGINT', async () => {
       await database.close();
       console.log('Database connection closed');
-      PerformanceObserverEntryList.exit(0);
+      process.exit(0);
     });
-  }
-  catch (error){
-    console.error('Database connection failed: ', error);
+  } catch (error) {
+    console.error('Database connection failed:', error);
     process.exit(1);
   }
 }
 
 connectDB().catch(err => {
-  console.error('Failed to connect to the database : ', err);
+  console.error('Failed to connect to the database:', err);
   process.exit(1);
 });
 
