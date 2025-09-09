@@ -2,12 +2,12 @@ var express = require('express');
 var router = express.Router();
 var bcrypt = require('bcrypt');
 var saltRounds = 10;
-const {ObjectId} = require('mongodb');
+const { ObjectId } = require('mongodb');
 
 var ResponseType = {
-  INVALID_USERNAME : 0,
-  INVALID_PASSWORD : 1,
-  SUCCESS : 2,
+  INVALID_USERNAME: 0,
+  INVALID_PASSWORD: 1,
+  SUCCESS: 2,
 }
 
 /* GET users listing. */
@@ -16,15 +16,15 @@ router.get('/', function(req, res, next) {
 });
 
 // 회원가입
-router.post('/signup', async function(req, res, next){
+router.post('/signup', async function(req, res, next) {
   try {
     var username = req.body.username;
     var password = req.body.password;
     var nickname = req.body.nickname;
 
     // 입력값 검증
-    if(!username || !password || !nickname){
-      return res.status(400).json({message: 'All fields are required.'});
+    if (!username || !password || !nickname) {
+      return res.status(400).json({ message: 'All fields are required.' });
     }
 
     // DB 연결
@@ -32,9 +32,9 @@ router.post('/signup', async function(req, res, next){
     var users = database.collection('users');
 
     // 중복된 username 확인
-    var existingUser = await users.findOne({ username});
-    if (existingUser){
-      return res.status(409).json({ result: ResponseType.INVALID_USERNAME});
+    var existingUser = await users.findOne({ username: username });
+    if (existingUser) {
+      return res.status(409).json({ result: ResponseType.INVALID_USERNAME });
     }
 
     // 비밀번호 암호화
@@ -49,23 +49,22 @@ router.post('/signup', async function(req, res, next){
       createdAt: new Date()
     });
 
-    res.status(201).json({result: ResponseType.SUCCESS});
-  }
-  catch (error) {
+    res.status(201).json({ result: ResponseType.SUCCESS });
+  } catch (error) {
     console.error('Error during signup:', error);
-    res.status(500).json({message: 'Internal server error.'});
+    res.status(500).json({ message: 'Internal server error.' });
   }
 });
 
 // 로그인
-router.post('/signin', async function(req, res, next){
+router.post('/signin', async function(req, res, next) {
   try {
     var username = req.body.username;
     var password = req.body.password;
 
     // 입력값 검증
-    if(!username || !password){
-      return res.status(400).json({ message : 'All fields are required'})
+    if (!username || !password) {
+      return res.status(400).json({ message: 'All fields are required.' });
     }
 
     // DB 연결
@@ -73,8 +72,8 @@ router.post('/signin', async function(req, res, next){
     var users = database.collection('users');
 
     // 사용자 조회
-    const existingUser = await users.findOne({ username: username});
-    if (existingUser){
+    const existingUser = await users.findOne({ username: username });
+    if (existingUser) {
       var compareResult = bcrypt.compareSync(password, existingUser.password);
       if (compareResult) {
         // 세션에 사용자 정보 저장
@@ -82,19 +81,16 @@ router.post('/signin', async function(req, res, next){
         req.session.userId = existingUser._id.toString();
         req.session.username = existingUser.username;
         req.session.nickname = existingUser.nickname;
-        res.json({ result : ResponseType.SUCCESS});
+        res.json({ result: ResponseType.SUCCESS });
+      } else {
+        res.status(401).json({ result: ResponseType.INVALID_PASSWORD });
       }
-      else{
-        res.status(401).json({ result : ResponseType.INVALID_PASSWORD});
-      }
+    } else {
+      res.status(401).json({ result: ResponseType.INVALID_USERNAME });
     }
-    else {
-      res.status(401).json({result : ResponseType.INVALID_USERNAME});
-    }
-  }
-  catch (error){
-    console.error('Error during signin', error);
-    res.status(500).json({message : 'Internal server error.'});
+  } catch (error) {
+    console.error('Error during signin:', error);
+    res.status(500).json({ message: 'Internal server error.' });
   }
 });
 
@@ -105,13 +101,11 @@ router.get('/signout', function(req, res, next) {
     req.session.destroy(function(err) {
       if (err) {
         return res.status(500).json({ message: 'Failed to log out.' });
-      } 
-      else {
+      } else {
         return res.json({ message: 'Logged out successfully.' });
       }
     });
-  } 
-  else {
+  } else {
     res.json({ message: 'No active session.' });
   }
 });
@@ -151,7 +145,6 @@ router.post('/addscore', async function(req, res, next) {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
-
 
 // 점수 조회
 router.get('/score', async function(req, res, next) {
